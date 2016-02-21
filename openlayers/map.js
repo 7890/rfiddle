@@ -140,28 +140,10 @@ function init()
 			var mouse_mercator_pos=map.getLonLatFromViewPortPx(mouse_pixel_pos);
 			var mouse_wgs84_pos=mouse_mercator_pos.clone();
 			mouse_wgs84_pos.transform(map.getProjectionObject(),map.displayProjection);
-
-			var xyCH1903LV03 = new Object();
-			xyCH1903LV03.y=WGStoCHy(mouse_wgs84_pos.lat, mouse_wgs84_pos.lon);
-			xyCH1903LV03.x=WGStoCHx(mouse_wgs84_pos.lat, mouse_wgs84_pos.lon);
-
 //			console.log("right click: xy: "+mouse_pixel_pos+" mercator "+mouse_mercator_pos+" wgs84 "+mouse_wgs84_pos);
-
 			main_marker=new OpenLayers.Marker(mouse_mercator_pos.clone(),marker_icon);
 			marker_layer.addMarker(main_marker);
-
-			OpenLayers.Util.getElement("coordinates-node-id").innerHTML = 
-			'<table id="#coordinates-table-id"><tr><td>'
-			+'View Pixel x,y: ' + '</td><td>&nbsp;</td><td>'
-			+ (mouse_pixel_pos.x - 0.8).toFixed(0) + ', '+(mouse_pixel_pos.y-0.2).toFixed(0) + '</td></tr><tr><td>'
-			+ 'EPSG:3857 Spherical Mercator lon,lat: ' + '</td><td>&nbsp;</td><td>'
-			+ mouse_mercator_pos.lon.toFixed(2) + ', ' + mouse_mercator_pos.lat.toFixed(2) + '</td></tr><tr><td>'
-			+ 'EPGS:4326 WGS84 lon,lat: ' + '</td><td>&nbsp;</td><td>'
-			+ mouse_wgs84_pos.lon.toFixed(6) + ', ' + mouse_wgs84_pos.lat.toFixed(6) + '</td></tr><tr><td>'
-			+ 'EPSG:21781 CH1903LV03 y,x (east,north): ' + '</td><td>&nbsp;</td><td>'
-			+ xyCH1903LV03.y.toFixed(2) + ', ' + xyCH1903LV03.x.toFixed(2)
-			+'</td></tr></table>';
-
+			update_position_panel(mouse_pixel_pos,mouse_mercator_pos,mouse_wgs84_pos);
 /*
 			var onPopupClose = function (e)
 			{
@@ -185,6 +167,25 @@ function init()
 
 	init_bottom_panel();
 }//end init
+
+function update_position_panel(pixel,mercator,wgs84)
+{
+	var xyCH1903LV03 = new Object();
+	xyCH1903LV03.y=WGStoCHy(wgs84.lat, wgs84.lon);
+	xyCH1903LV03.x=WGStoCHx(wgs84.lat, wgs84.lon);
+
+	OpenLayers.Util.getElement("coordinates-node-id").innerHTML = 
+	'<table id="#coordinates-table-id"><tr><td>'
+	+'View Pixel x,y: ' + '</td><td>&nbsp;</td><td>'
+	+ (pixel.x - 0.8).toFixed(0) + ', '+(pixel.y-0.2).toFixed(0) + '</td></tr><tr><td>'
+	+ 'EPSG:3857 Spherical Mercator lon,lat: ' + '</td><td>&nbsp;</td><td>'
+	+ mercator.lon.toFixed(2) + ', ' + mercator.lat.toFixed(2) + '</td></tr><tr><td>'
+	+ 'EPGS:4326 WGS84 lon,lat: ' + '</td><td>&nbsp;</td><td>'
+	+ wgs84.lon.toFixed(6) + ', ' + wgs84.lat.toFixed(6) + '</td></tr><tr><td>'
+	+ 'EPSG:21781 CH1903LV03 y,x (east,north): ' + '</td><td>&nbsp;</td><td>'
+	+ xyCH1903LV03.y.toFixed(2) + ', ' + xyCH1903LV03.x.toFixed(2)
+	+'</td></tr></table>';
+}
 
 function goto_home_view()
 {
@@ -217,11 +218,16 @@ function prompt_goto_position()
 				var wgs84_lonlat_string=$("#lonlat-input-id").val();
 				console.log("locate +"+wgs84_lonlat_string);
 				var wgs84_lonlat=new OpenLayers.LonLat.fromString(wgs84_lonlat_string);
-				var goto_mercator_lonlat=wgs84_lonlat.clone();
-				goto_mercator_lonlat.transform(map.displayProjection,map.getProjectionObject());
-				main_marker=new OpenLayers.Marker(goto_mercator_lonlat.clone(),marker_icon);
+				var mercator_lonlat=wgs84_lonlat.clone();
+				mercator_lonlat.transform(map.displayProjection,map.getProjectionObject());
+				main_marker=new OpenLayers.Marker(mercator_lonlat.clone(),marker_icon);
 				marker_layer.addMarker(main_marker);
-				map.setCenter(goto_mercator_lonlat);
+				map.setCenter(mercator_lonlat);
+				update_position_panel(
+					map.getPixelFromLonLat(mercator_lonlat)
+					,mercator_lonlat
+					,wgs84_lonlat
+				);
 			}
 		}
 	});
