@@ -47,6 +47,17 @@ cp -r OpenLayers-2.13.1/img ../openlayers/
 cp -r OpenLayers-2.13.1/theme/ ../openlayers/
 cp tile.stamen.v1.3.0.js ../openlayers/
 
+unzip wgs84ch1903js.zip
+rm wgs84ch1903js.zip*
+cp wgs84_ch1903.js ../openlayers/
+
+cp jquery-1.12.0.min.js ../openlayers
+
+unzip jQuery-contextMenu-master.zip
+rm jQuery-contextMenu-master.zip*
+cp jQuery-contextMenu-master/dist/jquery.contextMenu.min.js ../openlayers/
+cp jQuery-contextMenu-master/dist/jquery.contextMenu.min.css ../openlayers/
+
 mv rhino-1.7.7.1.jar lib/
 rm -f rhino-1.7.7.1.jar*
 
