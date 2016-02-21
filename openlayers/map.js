@@ -109,6 +109,39 @@ function init()
 		})
 	]);
 
+	//mouse right click context menu
+	map.div.oncontextmenu = function onContextMenu(e)
+	{
+		if(!e){ //dear IE...
+			var e = window.event;
+			e.returnValue = false;
+		}
+
+		if (OpenLayers.Event.isRightClick(e))
+		{
+			var mouse_pixel_pos=map.events.getMousePosition(e);
+			var mouse_mercator_pos=map.getLonLatFromViewPortPx(mouse_pixel_pos);
+			var mouse_wgs84_pos=mouse_mercator_pos.clone();
+			mouse_wgs84_pos.transform(map.getProjectionObject(),map.displayProjection);
+
+			console.log("right click: xy: "+mouse_pixel_pos+" mercator "+mouse_mercator_pos+" wgs84 "+mouse_wgs84_pos);
+
+			var onPopupClose = function (e)
+			{
+				this.destroy();
+			}
+
+			var popup = new OpenLayers.Popup.FramedCloud("click popup"
+				,mouse_mercator_pos
+				,new OpenLayers.Size(100,100)
+				,"<h2>hello</h2>"
+				,null,true,onPopupClose);
+
+			map.addPopup(popup, true);
+		}
+		return false; //prevent display of browser context menu
+	}//end noContextMenu()
+
 	//point data as WGS84 / EPSG:4326
 	var lon=7.438632510
 	var lat=46.951082897
@@ -116,7 +149,7 @@ function init()
 	var zoom=15;
 
 	//transform to map projection (Mercator / EPSG:3857)
-	var lonLat = new OpenLayers.LonLat(lon, lat).transform("EPSG:4326", map.getProjectionObject());
+	var lonLat = new OpenLayers.LonLat(lon, lat).transform(map.displayProjection, map.getProjectionObject());
 
 	//set initial view
 	map.setCenter(lonLat, zoom);
