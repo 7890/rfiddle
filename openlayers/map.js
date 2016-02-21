@@ -41,7 +41,43 @@ function init()
 
 	var osm_layer = new OpenLayers.Layer.OSM();
 
-	map.addLayers([empty_layer,osm_layer]);
+	var mapquest_layer = new OpenLayers.Layer.OSM("mapquest",
+		"http://otile1.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg",
+	{
+		isBaseLayer: true
+	});
+
+	var stamen_toner_standard_layer = new OpenLayers.Layer.Stamen("toner",
+	{
+		isBaseLayer: true
+	});
+	var stamen_toner_lite_layer = new OpenLayers.Layer.Stamen("toner-lite",
+	{
+		isBaseLayer: true
+	});
+	var stamen_toner_hybrid_layer = new OpenLayers.Layer.Stamen("toner-hybrid",
+	{
+		isBaseLayer: true
+	});
+	var stamen_toner_lines_layer = new OpenLayers.Layer.Stamen("toner-lines",
+	{
+		isBaseLayer: true
+	});
+	var stamen_toner_background_layer = new OpenLayers.Layer.Stamen("toner-background",
+	{
+		isBaseLayer: true
+	});
+
+	map.addLayers([
+		empty_layer
+		,osm_layer
+		,mapquest_layer
+		,stamen_toner_standard_layer
+		,stamen_toner_lite_layer
+		,stamen_toner_hybrid_layer
+		,stamen_toner_lines_layer
+		,stamen_toner_background_layer
+	]);
 	map.addControls([
 		new OpenLayers.Control.Navigation(),
 		new OpenLayers.Control.Zoom(),

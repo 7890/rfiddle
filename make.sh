@@ -45,6 +45,7 @@ cp OpenLayers-2.13.1/OpenLayers.js lib/
 cp OpenLayers-2.13.1/OpenLayers.js ../openlayers/
 cp -r OpenLayers-2.13.1/img ../openlayers/
 cp -r OpenLayers-2.13.1/theme/ ../openlayers/
+cp tile.stamen.v1.3.0.js ../openlayers/
 
 mv rhino-1.7.7.1.jar lib/
 rm -f rhino-1.7.7.1.jar*

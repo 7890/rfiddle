@@ -1,0 +1,4 @@
+http://maps.stamen.com/js/tile.stamen.js?v1.3.0
+(renamed)
+Sun Feb 21 02:50:50 CET 2016
+
