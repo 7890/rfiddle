@@ -26,47 +26,60 @@ var map;
 //init called from map.html body onload
 function init()
 {
+	//explicit definition to expand zoom levels (client side zoom)
+	var resolutions=[
+		156543.03390625, 78271.516953125, 39135.7584765625,
+		19567.87923828125, 9783.939619140625, 4891.9698095703125,
+		2445.9849047851562, 1222.9924523925781, 611.4962261962891,
+		305.74811309814453, 152.87405654907226, 76.43702827453613,
+		38.218514137268066, 19.109257068634033, 9.554628534317017,
+		4.777314267158508, 2.388657133579254, 1.194328566789627,
+		0.5971642833948135, 0.25, 0.1, 0.05
+	];
+
+	var serverResolutions=[
+		156543.03390625, 78271.516953125, 39135.7584765625,
+		19567.87923828125, 9783.939619140625, 4891.9698095703125,
+		2445.9849047851562, 1222.9924523925781, 611.4962261962891,
+		305.74811309814453, 152.87405654907226, 76.43702827453613,
+		38.218514137268066, 19.109257068634033, 9.554628534317017,
+		4.777314267158508, 2.388657133579254, 1.194328566789627,
+		0.5971642833948135
+	];
+
 	map = new OpenLayers.Map(
 	{
 		div: "map"
 		,controls: [] //no default set
 		,projection: "EPSG:3857"
 		,displayProjection: "EPSG:4326"
+		,resolutions: resolutions
 	});
 
-	var empty_layer = new OpenLayers.Layer.Vector("empty",
+	var standard_baselayer_options=
 	{
-		isBaseLayer: true
-	});
+		resolutions: resolutions
+		,serverResolutions: serverResolutions
+		,isBaseLayer: true
+	};
 
-	var osm_layer = new OpenLayers.Layer.OSM();
+	var empty_layer = new OpenLayers.Layer.Vector("empty",standard_baselayer_options);
+
+	var osm_layer = new OpenLayers.Layer.OSM(null,null,standard_baselayer_options);
 
 	var mapquest_layer = new OpenLayers.Layer.OSM("mapquest",
-		"http://otile1.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg",
-	{
-		isBaseLayer: true
-	});
+	[
+		 "http://otile1.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
+		,"http://otile2.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
+		,"http://otile3.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
+		,"http://otile4.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
+	],standard_baselayer_options);
 
-	var stamen_toner_standard_layer = new OpenLayers.Layer.Stamen("toner",
-	{
-		isBaseLayer: true
-	});
-	var stamen_toner_lite_layer = new OpenLayers.Layer.Stamen("toner-lite",
-	{
-		isBaseLayer: true
-	});
-	var stamen_toner_hybrid_layer = new OpenLayers.Layer.Stamen("toner-hybrid",
-	{
-		isBaseLayer: true
-	});
-	var stamen_toner_lines_layer = new OpenLayers.Layer.Stamen("toner-lines",
-	{
-		isBaseLayer: true
-	});
-	var stamen_toner_background_layer = new OpenLayers.Layer.Stamen("toner-background",
-	{
-		isBaseLayer: true
-	});
+	var stamen_toner_standard_layer = new OpenLayers.Layer.Stamen("toner",standard_baselayer_options);
+	var stamen_toner_lite_layer = new OpenLayers.Layer.Stamen("toner-lite",standard_baselayer_options);
+	var stamen_toner_hybrid_layer = new OpenLayers.Layer.Stamen("toner-hybrid",standard_baselayer_options);
+	var stamen_toner_lines_layer = new OpenLayers.Layer.Stamen("toner-lines",standard_baselayer_options);
+	var stamen_toner_background_layer = new OpenLayers.Layer.Stamen("toner-background",standard_baselayer_options);
 
 	map.addLayers([
 		empty_layer
