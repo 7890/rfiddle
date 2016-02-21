@@ -58,6 +58,12 @@ rm jQuery-contextMenu-master.zip*
 cp jQuery-contextMenu-master/dist/jquery.contextMenu.min.js ../openlayers/
 cp jQuery-contextMenu-master/dist/jquery.contextMenu.min.css ../openlayers/
 
+unzip jQuery-Impromptu-master.zip
+rm jQuery-Impromptu-master.zip*
+cp jQuery-Impromptu-master/dist/jquery-impromptu.min.css ../openlayers/
+cp jQuery-Impromptu-master/dist/jquery-impromptu.min.js ../openlayers/
+cp -r jQuery-Impromptu-master/dist/themes ../openlayers/
+
 mv rhino-1.7.7.1.jar lib/
 rm -f rhino-1.7.7.1.jar*
 

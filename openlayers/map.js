@@ -24,6 +24,9 @@ EPSG:3857 (==EPSG:900913), "Web Mercator", uses a coordinate system PROJECTED fr
 //http://dev.openlayers.org/docs/files/OpenLayers/Map-js.html
 var map;
 
+//http://dev.openlayers.org/docs/files/OpenLayers/Layer/Markers-js.html
+var marker_layer;
+
 //http://dev.openlayers.org/docs/files/OpenLayers/Marker-js.html
 var marker_size = new OpenLayers.Size(21,25);
 var marker_offset = new OpenLayers.Pixel(-(marker_size.w/2), -marker_size.h);
@@ -90,9 +93,7 @@ function init()
 	var stamen_toner_background_layer = new OpenLayers.Layer.Stamen("toner-background",standard_baselayer_options);
 
 	//http://dev.openlayers.org/docs/files/OpenLayers/Layer/Markers-js.html
-	var marker_layer = new OpenLayers.Layer.Markers("marker");
-	//main_marker.display(false);
-	//marker_layer.addMarker(main_marker);
+	marker_layer = new OpenLayers.Layer.Markers("marker");
 
 	//http://dev.openlayers.org/docs/files/OpenLayers/Layer/Vector-js.html
 
@@ -152,7 +153,7 @@ function init()
 			OpenLayers.Util.getElement("coordinates-node-id").innerHTML = 
 			'<table id="#coordinates-table-id"><tr><td>'
 			+'View Pixel x,y: ' + '</td><td>&nbsp;</td><td>'
-			+ (mouse_pixel_pos.x - 0.8).toFixed(1) + ', '+(mouse_pixel_pos.y-0.1).toFixed(1) + '</td></tr><tr><td>'
+			+ (mouse_pixel_pos.x - 0.8).toFixed(0) + ', '+(mouse_pixel_pos.y-0.2).toFixed(0) + '</td></tr><tr><td>'
 			+ 'EPSG:3857 Spherical Mercator lon,lat: ' + '</td><td>&nbsp;</td><td>'
 			+ mouse_mercator_pos.lon.toFixed(2) + ', ' + mouse_mercator_pos.lat.toFixed(2) + '</td></tr><tr><td>'
 			+ 'EPGS:4326 WGS84 lon,lat: ' + '</td><td>&nbsp;</td><td>'
@@ -199,8 +200,42 @@ function goto_home_view()
 	map.setCenter(lonLat, zoom);
 }
 
+function prompt_goto_position()
+{
+	$.prompt('Comma separated LONGITUDE, LATITUDE (WGS84):'
+	+'<input id="lonlat-input-id" type="text" name="lonlat_input" value=""></input>',
+	{
+		title: "Locate to Position"
+		,buttons: { "Cancel": 0, "  OK  ": 1}
+		,defaultButton: 1
+		,persistent: false
+		,focus: "input[name='lonlat_input']"
+		,submit: function(e,v,m,f)
+		{
+			if(v)
+			{
+				var wgs84_lonlat_string=$("#lonlat-input-id").val();
+				console.log("locate +"+wgs84_lonlat_string);
+				var wgs84_lonlat=new OpenLayers.LonLat.fromString(wgs84_lonlat_string);
+				var goto_mercator_lonlat=wgs84_lonlat.clone();
+				goto_mercator_lonlat.transform(map.displayProjection,map.getProjectionObject());
+				main_marker=new OpenLayers.Marker(goto_mercator_lonlat.clone(),marker_icon);
+				marker_layer.addMarker(main_marker);
+				map.setCenter(goto_mercator_lonlat);
+			}
+		}
+	});
+}
+
 function init_bottom_panel()
 {
+	$.prompt.setDefaults({
+		show: 'fadeIn'
+		,overlayspeed: 1
+		,promptspeed: 1
+		,hide: 'hide'
+	});
+
 	$('#jquery-menu-node-id').contextMenu(
 	{
 		selector: '.context-menu'
@@ -233,6 +268,10 @@ function init_bottom_panel()
 			{
 				map.zoomTo(map.numZoomLevels);
 			}
+			else if(key=='goto_position')
+			{
+				prompt_goto_position();
+			}
 		}
 		,items:
 		{
@@ -241,6 +280,7 @@ function init_bottom_panel()
 			,"center_on_marker": {name: "Center on Marker"}
 			,"zoom_to_marker": {name: "Zoom to Marker"}
 			,"zoom_max": {name: "Zoom Max"}
+			,"goto_position": {name: "Goto Position"}
 		}
 	});
 }//end init_bottom_panel()
