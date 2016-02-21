@@ -105,7 +105,7 @@ function init()
 			That behavior is not mentioned in documentation, but you can find it easily, when you look at control's source code.
 			*/
 			bottomOutUnits: ''
-			,div: document.getElementById("scaleline-id") //see style.css
+			,div: document.getElementById("scaleline-id")
 		})
 	]);
 
