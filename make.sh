@@ -30,6 +30,7 @@ rm -f 1.2.35.tar.gz*
 cd env-js-1.2.35/
 ant
 cd ..
+#in build
 mkdir -p lib/envjs
 cp -r env-js-1.2.35/dist/* lib/envjs/
 
@@ -38,8 +39,12 @@ rm -f prettyprint.js-master.zip*
 cat prettyprint.js-master/prettyprint.js | grep -v "linearGrad.addColorStop" > lib/prettyprint.js
 
 tar xf OpenLayers-2.13.1.tar.gz
-cp OpenLayers-2.13.1/OpenLayers.js lib/
 rm OpenLayers-2.13.1.tar.gz*
+cp OpenLayers-2.13.1/OpenLayers.js lib/
+
+cp OpenLayers-2.13.1/OpenLayers.js ../openlayers/
+cp -r OpenLayers-2.13.1/img ../openlayers/
+cp -r OpenLayers-2.13.1/theme/ ../openlayers/
 
 mv rhino-1.7.7.1.jar lib/
 rm -f rhino-1.7.7.1.jar*

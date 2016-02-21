@@ -1,0 +1,5 @@
+OpenLayers.js and folders named 'img' and theme' should be present in this directory.
+
+either link or copy from OpenLayers archive (see build dir for extracted)
+
+this is normally done automatically during make.sh
