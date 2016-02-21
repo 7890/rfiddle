@@ -266,8 +266,14 @@ function init_bottom_panel()
 			{
 				if(main_marker.lonlat.lon!=0 && main_marker.lonlat.lon!=0)
 				{
-					map.setCenter(main_marker.lonlat);
-					map.zoomIn();
+					var new_zoom_level=map.getZoom();
+					new_zoom_level+=3;
+					if(new_zoom_level>map.numZoomLevels)
+					{
+						new_zoom_level=map.numZoomLevels;
+					}
+					map.setCenter(main_marker.lonlat,new_zoom_level);
+					//map.zoomIn();
 				}
 			}
 			else if(key=='zoom_max')
