@@ -34,6 +34,7 @@ var marker_icon = new OpenLayers.Icon('img/marker.png', marker_size, marker_offs
 var main_marker=new OpenLayers.Marker(new OpenLayers.LonLat(0,0),marker_icon);
 
 //init called from map.html body onload
+//=============================================================================
 function init()
 {
 	//explicit definition to expand zoom levels (client side zoom)
@@ -76,6 +77,12 @@ function init()
 
 	var empty_layer = new OpenLayers.Layer.Vector("empty",standard_baselayer_options);
 
+	//create tile image placeholders dynamically
+	var tile_info_layer = new OpenLayers.Layer.OSM("tile info",
+	[
+		 "http://placeholdit.imgix.net/~text?txtsize=19&bg=ffffff&txtclr=332211&txt=${z}%2F${x}%2F${y}&w=256&h=256"
+	],standard_baselayer_options);
+
 	var osm_layer = new OpenLayers.Layer.OSM(null,null,standard_baselayer_options);
 
 	var mapquest_layer = new OpenLayers.Layer.OSM("mapquest",
@@ -93,12 +100,13 @@ function init()
 	var stamen_toner_background_layer = new OpenLayers.Layer.Stamen("toner-background",standard_baselayer_options);
 
 	//http://dev.openlayers.org/docs/files/OpenLayers/Layer/Markers-js.html
-	marker_layer = new OpenLayers.Layer.Markers("marker");
+	marker_layer = new OpenLayers.Layer.Markers("Marker");
 
 	//http://dev.openlayers.org/docs/files/OpenLayers/Layer/Vector-js.html
 
 	map.addLayers([
 		empty_layer
+		,tile_info_layer
 		,osm_layer
 		,mapquest_layer
 		,stamen_toner_standard_layer
@@ -125,6 +133,8 @@ function init()
 			,div: OpenLayers.Util.getElement("scaleline-id")
 		})
 	]);
+
+	map.events.register('moveend', map, handle_move_end);
 
 	//mouse right click context menu
 	map.div.oncontextmenu = function onContextMenu(e)
@@ -169,6 +179,54 @@ function init()
 	init_bottom_panel();
 }//end init
 
+//=============================================================================
+function handle_move_end(e)
+{
+	var map_bounds=map.calculateBounds();
+	var map_bounds_wgs84=map_bounds.clone();
+	map_bounds_wgs84.transform(map.getProjectionObject(),map.displayProjection);
+
+//	console.log(map_bounds_wgs84);
+
+	map_left_bottom=new OpenLayers.Geometry.Point(map_bounds_wgs84.left,map_bounds_wgs84.bottom);
+	map_left_top=new OpenLayers.Geometry.Point(map_bounds_wgs84.left,map_bounds_wgs84.top);
+	map_right_bottom=new OpenLayers.Geometry.Point(map_bounds_wgs84.right,map_bounds_wgs84.bottom);
+	map_right_top=new OpenLayers.Geometry.Point(map_bounds_wgs84.right,map_bounds_wgs84.top);
+
+	var line1= new OpenLayers.Geometry.LineString([map_left_top, map_right_top]);
+	var line2= new OpenLayers.Geometry.LineString([map_left_bottom, map_right_bottom]);
+	var line3= new OpenLayers.Geometry.LineString([map_left_top, map_left_bottom]);
+	var line4= new OpenLayers.Geometry.LineString([map_right_top, map_right_bottom]);
+
+	var dist1= line1.getGeodesicLength(map.displayProjection);
+	var dist2= line2.getGeodesicLength(map.displayProjection);
+	var dist3= line3.getGeodesicLength(map.displayProjection);
+	var dist4= line4.getGeodesicLength(map.displayProjection);
+
+	OpenLayers.Util.getElement("edge-length-info-id").innerHTML = 
+
+	'<table id="#bounds-table-id"><tr><td>'
+	+'View Zoom Level: ' + '</td><td>&nbsp;</td><td>'
+	+ map.getZoom() + '</td></tr><tr><td>'
+
+	+'View Dimension Pixels w,h: ' + '</td><td>&nbsp;</td><td>'
+	+ map.getSize().w + ', ' + map.getSize().h + '</td></tr><tr><td>'
+
+	+ 'View Center lon,lat: ' + '</td><td>&nbsp;</td><td>'
+	+ map_bounds_wgs84.getCenterLonLat().lon.toFixed(6) + ', '
+	+ map_bounds_wgs84.getCenterLonLat().lat.toFixed(6) + '</td></tr><tr><td>'
+
+	+ 'View Bounds (left,bottom,right,top): ' + '</td><td>&nbsp;</td><td>'
+	+ map_bounds_wgs84.left.toFixed(6) + ', ' + map_bounds_wgs84.bottom.toFixed(6) + ', '
+	+ map_bounds_wgs84.right.toFixed(6) + ', '+ map_bounds_wgs84.top.toFixed(6) + '</td></tr><tr><td>'
+
+	+ 'View Edge Length (left,bottom,top,diff): ' + '</td><td>&nbsp;</td><td>'
+	+ dist3.toFixed(2) + ', ' + dist1.toFixed(2) + ', '+ dist2.toFixed(2) + ', '+ (dist2-dist1).toFixed(2) + '</td>'
+
+	+'</tr></table>';
+}//end handle_move_end()
+
+//=============================================================================
 function update_position_panel(pixel,mercator,wgs84)
 {
 	var xyCH1903LV03 = new Object();
@@ -188,6 +246,7 @@ function update_position_panel(pixel,mercator,wgs84)
 	+'</td></tr></table>';
 }
 
+//=============================================================================
 function goto_home_view()
 {
 	//point data as WGS84 / EPSG:4326
@@ -202,8 +261,11 @@ function goto_home_view()
 	map.setCenter(lonLat, zoom);
 }
 
+//=============================================================================
 function prompt_goto_position()
 {
+	remove_zoom_and_layerswitcher();
+
 	$.prompt('Comma separated LONGITUDE, LATITUDE (WGS84):'
 	+'<input id="lonlat-input-id" type="text" name="lonlat_input" value=""></input>',
 	{
@@ -212,12 +274,18 @@ function prompt_goto_position()
 		,defaultButton: 1
 		,persistent: false
 		,focus: "input[name='lonlat_input']"
+		,close: function(e)
+		{
+			map.addControl(new OpenLayers.Control.Zoom());
+			map.addControl(new OpenLayers.Control.LayerSwitcher());
+			map.addControl(new OpenLayers.Control.LayerAttribution());
+		}
 		,submit: function(e,v,m,f)
 		{
 			if(v)
 			{
 				var wgs84_lonlat_string=$("#lonlat-input-id").val();
-				console.log("locate +"+wgs84_lonlat_string);
+//				console.log("locate +"+wgs84_lonlat_string);
 				var wgs84_lonlat=new OpenLayers.LonLat.fromString(wgs84_lonlat_string);
 				if(!isNaN(wgs84_lonlat.lon) && !isNaN(wgs84_lonlat.lat))
 				{
@@ -236,8 +304,149 @@ function prompt_goto_position()
 			}
 		}
 	});
+}//end prompt_goto_position()
+
+//=============================================================================
+function remove_zoom_and_layerswitcher()
+{
+	//remove zoom and layerswitcher map overlays
+	for(var i=0;i<map.controls.length;i++)
+	{
+		if(map.controls[i].CLASS_NAME=="OpenLayers.Control.LayerSwitcher")
+		{
+			map.removeControl(map.controls[i]);
+			break;
+		}
+	}
+	for(var i=0;i<map.controls.length;i++)
+	{
+		if(map.controls[i].CLASS_NAME=="OpenLayers.Control.Zoom")
+		{
+			map.removeControl(map.controls[i]);
+			break;
+		}
+	}
+	for(var i=0;i<map.controls.length;i++)
+	{
+		if(map.controls[i].CLASS_NAME=="OpenLayers.Control.Attribution")
+		{
+			map.removeControl(map.controls[i]);
+			break;
+		}
+	}
 }
 
+//=============================================================================
+function prompt_load_file()
+{
+	remove_zoom_and_layerswitcher();
+
+	var file_tmp_path;
+
+	var format_options=
+	{
+		gpx: 'GPX'
+		,geojson: 'GeoJSON'
+	};
+	var format_dropdown = $('<select id="format-dropdown-id">');
+	$.each(format_options, function(val, text)
+	{
+		format_dropdown.append(
+			$('<option></option>').val(val).html(text)
+		);
+	});
+
+	/*
+	The bread and butter of Impromptu is forms. 
+	By simply including form fields in the html all form values are gathered and sent via 
+	the "f" (aka "form") parameter. The "m" (aka "message") parameter is a jQuery object 
+	of the message itself incase you need to modify the dom. Open your javascript console 
+	to view the object sent on submit.
+	*/
+
+	$.prompt('File:'
+	+'<input id="file-browse-id" type="file" name="file_browser" value=""></input><br/>'
+	+'Format: '+ format_dropdown.get(0).outerHTML +'<br/>'
+	+'Extract Attributes: <input id="extract-attrs-id" type="checkbox" name="extract_attributs" value="extract" checked></input><br/>'
+	+'Layername: <input id="layer-name-id" type="text" name="layer_name" value=""></input><br/>',
+	{
+		title: "Load File"
+		,buttons: { "Cancel": 0, "  OK  ": 1}
+		,defaultButton: 1
+		,persistent: false
+		,focus: "input[name='file_browser']"
+		,loaded: function(e)
+		{
+			//http://stackoverflow.com/questions/15201071/how-to-get-full-path-of-selected-file-on-change-of-input-type-file-using-jav
+			$('#file-browse-id').change( function(event)
+			{
+				file_tmp_path = URL.createObjectURL(event.target.files[0]);
+			});
+ 
+		}//end loaded
+		,close: function(e)
+		{
+			map.addControl(new OpenLayers.Control.Zoom());
+			map.addControl(new OpenLayers.Control.LayerSwitcher());
+			map.addControl(new OpenLayers.Control.Attribution());
+		}
+		,submit: function(e,v,m,f)
+		{
+			if(v)
+			{
+				var file_uri_string=$("#file-browse-id").val().trim();
+				var data_format_id=$("#format-dropdown-id").val();
+				var extract_attrs=$("#extract-attrs-id").is(":checked");
+				var layer_name=$("#layer-name-id").val().trim();
+//				console.log("file: "+file_uri_string+" "+data_format_id+" "+extract_attrs+" "+layer_name);
+				if(file_uri_string!='')
+				{
+					if(layer_name=='')
+					{
+						layer_name=file_uri_string;
+					}
+
+					var data_format;
+					if(data_format_id=='gpx')
+					{
+						data_format = new OpenLayers.Format.GPX("");
+					}
+					else if (data_format_id=='geojson')
+					{
+						data_format = new OpenLayers.Format.GeoJSON("");
+
+					}
+					if(extract_attrs)
+					{
+						data_format.extractAttributes=true;
+					}
+
+					var new_layer = new OpenLayers.Layer.Vector(layer_name,
+					{
+						projection: map.displayProjection
+						,strategies: [new OpenLayers.Strategy.Fixed()]
+						,protocol: new OpenLayers.Protocol.HTTP({
+							url: file_tmp_path
+							,format: data_format
+						})
+						,styleMap: new OpenLayers.StyleMap({
+							'default': new OpenLayers.Style({
+								fillColor: "#ffcc66"
+								,strokeColor: "#ff0000"
+								,strokeWidth: 10
+								,graphicZIndex: 1
+								,strokeOpacity: 1
+							})
+						})
+					});
+					map.addLayer(new_layer);
+				}//end if file provided
+			}//end if ok pressed
+		}//end submit function
+	}); //end $.prompt
+}//end prompt_load_file()
+
+//=============================================================================
 function init_bottom_panel()
 {
 	$.prompt.setDefaults({
@@ -245,7 +454,14 @@ function init_bottom_panel()
 		,overlayspeed: 1
 		,promptspeed: 1
 		,hide: 'hide'
+		,zindex: 10000
 	});
+
+	var layer_items={
+		"fold1-key1": {"name": "Foo bar"},
+		"fold1-key1": {"name": "dynamic here"},
+		"fold1-key3": {"name": "delta"}
+	};
 
 	$('#jquery-menu-node-id').contextMenu(
 	{
@@ -289,6 +505,14 @@ function init_bottom_panel()
 			{
 				prompt_goto_position();
 			}
+			else if(key=='load_file')
+			{
+				prompt_load_file();
+			}
+			else if(key=='fold1-key1')
+			{
+				console.log("here");
+			}
 		}
 		,items:
 		{
@@ -298,6 +522,13 @@ function init_bottom_panel()
 			,"zoom_to_marker": {name: "Zoom to Marker"}
 			,"zoom_max": {name: "Zoom Max"}
 			,"goto_position": {name: "Goto Position"}
+			,"load_file": {name: "Load File"}
+/*
+			,"fold1": {
+				"name": "Delete Layer"
+				,"items": layer_items
+			}
+*/
 		}
 	});
 }//end init_bottom_panel()
