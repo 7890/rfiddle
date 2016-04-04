@@ -262,6 +262,35 @@ function goto_home_view()
 }
 
 //=============================================================================
+function set_marker(wgs84_lonlat, do_center, do_pan)
+{
+	if(!isNaN(wgs84_lonlat.lon) && !isNaN(wgs84_lonlat.lat))
+	{
+		var mercator_lonlat=wgs84_lonlat.clone();
+		mercator_lonlat.transform(map.displayProjection,map.getProjectionObject());
+		main_marker=new OpenLayers.Marker(mercator_lonlat.clone(),marker_icon);
+		marker_layer.addMarker(main_marker);
+		main_marker.display(true);
+		if(do_center)
+		{
+			if(do_pan)
+			{
+				map.panTo(mercator_lonlat);
+			}
+			else
+			{
+				map.setCenter(mercator_lonlat);
+			}
+		}
+		update_position_panel(
+			map.getPixelFromLonLat(mercator_lonlat)
+			,mercator_lonlat
+			,wgs84_lonlat
+		);
+	}
+}
+
+//=============================================================================
 function prompt_goto_position()
 {
 	remove_zoom_and_layerswitcher();
@@ -284,23 +313,9 @@ function prompt_goto_position()
 		{
 			if(v)
 			{
-				var wgs84_lonlat_string=$("#lonlat-input-id").val();
-//				console.log("locate +"+wgs84_lonlat_string);
+				var wgs84_lonlat_string=$("#lonlat-input-id").val().trim();
 				var wgs84_lonlat=new OpenLayers.LonLat.fromString(wgs84_lonlat_string);
-				if(!isNaN(wgs84_lonlat.lon) && !isNaN(wgs84_lonlat.lat))
-				{
-					var mercator_lonlat=wgs84_lonlat.clone();
-					mercator_lonlat.transform(map.displayProjection,map.getProjectionObject());
-					main_marker=new OpenLayers.Marker(mercator_lonlat.clone(),marker_icon);
-					marker_layer.addMarker(main_marker);
-					main_marker.display(true);
-					map.setCenter(mercator_lonlat);
-					update_position_panel(
-						map.getPixelFromLonLat(mercator_lonlat)
-						,mercator_lonlat
-						,wgs84_lonlat
-					);
-				}
+				set_marker(wgs84_lonlat,true,false);
 			}
 		}
 	});
