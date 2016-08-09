@@ -20,13 +20,20 @@
 		<script src="wgs84_ch1903.js"></script>
 
 		<script src="map.js"></script>
+		<script src="map_view_info.js"></script>
+
 		<style>
 			.olControlAttribution {
 				bottom: 5px;
 			}
 			#map {
-				width:  800px;
+
+/*				width:  800px;
 				height: 500px;
+*/
+
+				width: 1052px;
+				height: 744px;
 			}
 			#scaleline-id {
 				margin: 10px;
@@ -57,7 +64,10 @@
 		<div id="jquery-menu-node-id"><button class="context-menu">Actions</button></div>
 		<div id="coordinates-node-id">(no position available)</div>
 		<div id="scaleline-id"></div>
-	</div>
+	</div><br>
+	<table>
+		<tr><td>Tiles loadstart/loadend balance:&nbsp;</td><td id="tile-load-balance-id"></td></tr>
+	</table>
 	<div id="edge-length-info-id"></div>
 	</body>
 </html>

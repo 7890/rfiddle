@@ -33,6 +33,10 @@ var marker_offset = new OpenLayers.Pixel(-(marker_size.w/2), -marker_size.h);
 var marker_icon = new OpenLayers.Icon('img/marker.png', marker_size, marker_offset);
 var main_marker=new OpenLayers.Marker(new OpenLayers.LonLat(0,0),marker_icon);
 
+//for each requested tile, increment this value
+//for each received tile, decrement
+var tile_load_balance=0;
+
 //init called from map.html body onload
 //=============================================================================
 function init()
@@ -45,8 +49,33 @@ function init()
 		305.74811309814453, 152.87405654907226, 76.43702827453613,
 		38.218514137268066, 19.109257068634033, 9.554628534317017,
 		4.777314267158508, 2.388657133579254, 1.194328566789627,
-		0.5971642833948135, 0.25, 0.1, 0.05
+		0.5971642833948135, 0.25, 0.1/*, 0.05*/
 	];
+
+/*
+		156543.03390625		//00
+		,78271.516953125	//01
+		,39135.7584765625	//02
+		,19567.87923828125	//03
+		,9783.939619140625	//04
+		,4891.9698095703125	//05
+		,2445.9849047851562	//06
+		,1222.9924523925781	//07
+		,611.4962261962891	//08
+		,305.74811309814453	//09
+		,152.87405654907226	//10      ...
+		,76.43702827453613	//11      -
+		,38.218514137268066	//12      0
+		,19.109257068634033	//13      1
+		,9.554628534317017	//14      2
+		,4.777314267158508	//15      3
+		,2.388657133579254	//16      4
+		,1.194328566789627	//17 ..   +
+		,0.5971642833948135	//18 18   +
+		,0.25			//19 +
+		,0.1			//20 +
+		,0.05			//21 +
+*/
 
 	var serverResolutions=[
 		156543.03390625, 78271.516953125, 39135.7584765625,
@@ -66,6 +95,9 @@ function init()
 		,displayProjection: "EPSG:4326"
 		,resolutions: resolutions
 		,numZoomLevels: 21
+		,panRatio: 1.5
+		,panDuration: 20
+		,autoUpdateSize: true
 	});
 
 	var standard_baselayer_options=
@@ -73,49 +105,121 @@ function init()
 		resolutions: resolutions
 		,serverResolutions: serverResolutions
 		,isBaseLayer: true
+		/*per tile action*/
+		,tileOptions: {
+			eventListeners: {
+				'loadstart': function(evt) {
+					tile_load_balance++;
+					$('#tile-load-balance-id').html(tile_load_balance);
+				}
+				,'loadend': function(evt) {
+					tile_load_balance--;
+					$('#tile-load-balance-id').html(tile_load_balance);
+				}
+			}
+		}
 	};
 
+	var standard_layer_options=
+	{
+		resolutions: resolutions
+		,serverResolutions: serverResolutions
+		,isBaseLayer: false
+		/*per tile action*/
+		,tileOptions: {
+			eventListeners: {
+				'loadstart': function(evt) {
+					tile_load_balance++;
+					$('#tile-load-balance-id').html(tile_load_balance);
+				}
+				,'loadend': function(evt) {
+					tile_load_balance--;
+					$('#tile-load-balance-id').html(tile_load_balance);
+				}
+			}
+		}
+	};
+
+	//allowing an empty (white) background as baselayer
 	var empty_layer = new OpenLayers.Layer.Vector("empty",standard_baselayer_options);
 
-	//create tile image placeholders dynamically
-	var tile_info_layer = new OpenLayers.Layer.OSM("tile info",
-	[
-		 "http://placeholdit.imgix.net/~text?txtsize=19&bg=ffffff&txtclr=332211&txt=${z}%2F${x}%2F${y}&w=256&h=256"
-	],standard_baselayer_options);
-
+	//openstreetmap default layer
 	var osm_layer = new OpenLayers.Layer.OSM(null,null,standard_baselayer_options);
 
-	var mapquest_layer = new OpenLayers.Layer.OSM("mapquest",
-	[
-		 "http://otile1.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
-		,"http://otile2.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
-		,"http://otile3.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
-		,"http://otile4.mqcdn.com/tiles/1.0.0/map//${z}/${x}/${y}.jpg"
-	],standard_baselayer_options);
-
+	//some grey / black & white layers from stamen
 	var stamen_toner_standard_layer = new OpenLayers.Layer.Stamen("toner",standard_baselayer_options);
 	var stamen_toner_lite_layer = new OpenLayers.Layer.Stamen("toner-lite",standard_baselayer_options);
 	var stamen_toner_hybrid_layer = new OpenLayers.Layer.Stamen("toner-hybrid",standard_baselayer_options);
 	var stamen_toner_lines_layer = new OpenLayers.Layer.Stamen("toner-lines",standard_baselayer_options);
 	var stamen_toner_background_layer = new OpenLayers.Layer.Stamen("toner-background",standard_baselayer_options);
 
+	//layer to put (for now a single) marker
 	//http://dev.openlayers.org/docs/files/OpenLayers/Layer/Markers-js.html
-	marker_layer = new OpenLayers.Layer.Markers("Marker");
+	marker_layer = new OpenLayers.Layer.Markers("marker");
 
 	//http://dev.openlayers.org/docs/files/OpenLayers/Layer/Vector-js.html
 
+	//layers served i.e. with https://github.com/7890/java_httpd and https://github.com/7890/java_osm_renderer
+	//var map_server_host="localhost";
+	var map_server_host="my.mapserver.foo";
+	var map_server_proto="http";
+
+	var port_range_start=18080;
+	var tile_info_urls=[];
+	for(var i=0;i<4;i++)
+	{
+		tile_info_urls.push(map_server_proto+"://"+map_server_host+":"+(port_range_start+i)+"/${z}/${x}/${y}");
+	}
+	console.log(tile_info_urls);
+
+	//this layer creates tile image placeholders (eventually dynamically)
+	var tile_info_layer = new OpenLayers.Layer.OSM("tile info"
+	,tile_info_urls
+	,standard_layer_options);
+
+	port_range_start=18084;
+	var layer_overlay1_urls=[];
+	for(var i=0;i<4;i++)
+	{
+		layer_overlay1_urls.push(map_server_proto+"://"+map_server_host+":"+(port_range_start+i)+"/${z}/${x}/${y}");
+	}
+	console.log(layer_overlay1_urls);
+
+	//this is a non-exclusive layer (i.e. not a baselayer) with or without transparency
+	var layer_overlay1 = new OpenLayers.Layer.OSM("overlay 1"
+	,layer_overlay1_urls
+	,standard_layer_options);
+
+/*
+	port_range_start=18088;
+	var layer_overlay2_urls=[];
+	for(var i=0;i<4;i++)
+	{
+		layer_overlay2_urls.push(map_server_proto+"://"+map_server_host+":"+(port_range_start+i)+"/${z}/${x}/${y}");
+	}
+	console.log(layer_overlay2_urls);
+
+	//this is a non-exclusive layer (i.e. not a baselayer) with or without transparency
+	var layer_overlay2 = new OpenLayers.Layer.OSM("overlay 2"
+	,layer_overlay2_urls
+	,standard_layer_options);
+*/
+
 	map.addLayers([
 		empty_layer
-		,tile_info_layer
 		,osm_layer
-		,mapquest_layer
 		,stamen_toner_standard_layer
 		,stamen_toner_lite_layer
 		,stamen_toner_hybrid_layer
 		,stamen_toner_lines_layer
 		,stamen_toner_background_layer
+
+		,layer_overlay1
+		/*,layer_overlay2*/
+		,tile_info_layer
 		,marker_layer
 	]);
+
 	map.addControls([
 		new OpenLayers.Control.Navigation(),
 		new OpenLayers.Control.Zoom(),
@@ -135,6 +239,12 @@ function init()
 	]);
 
 	map.events.register('moveend', map, handle_move_end);
+
+	map.events.register("zoomend", map, handle_zoom_changed);
+	function handle_zoom_changed()
+	{
+		//console.log(map.getZoom());
+	}
 
 	//mouse right click context menu
 	map.div.oncontextmenu = function onContextMenu(e)
@@ -174,7 +284,7 @@ function init()
 	}//end noContextMenu()
 
 	goto_home_view();
-	map.setBaseLayer(osm_layer);
+	map.setBaseLayer(empty_layer);
 
 	init_bottom_panel();
 }//end init
@@ -250,8 +360,14 @@ function update_position_panel(pixel,mercator,wgs84)
 function goto_home_view()
 {
 	//point data as WGS84 / EPSG:4326
-	var lon=7.438632510
-	var lat=46.951082897
+	//bern
+//	var lon=7.438632510;
+//	var lat=46.951082897;
+
+	//basel
+	var lon=7.589619;
+	var lat=47.560166;
+
 	var zoom=15;
 
 	//transform to map projection (Mercator / EPSG:3857)
@@ -307,7 +423,7 @@ function prompt_goto_position()
 		{
 			map.addControl(new OpenLayers.Control.Zoom());
 			map.addControl(new OpenLayers.Control.LayerSwitcher());
-			map.addControl(new OpenLayers.Control.LayerAttribution());
+			map.addControl(new OpenLayers.Control.Attribution());
 		}
 		,submit: function(e,v,m,f)
 		{
@@ -352,16 +468,87 @@ function remove_zoom_and_layerswitcher()
 }
 
 //=============================================================================
+function parse_filename_extension(filename)
+{
+	var re = /(?:\.([^.]+))?$/;
+/*
+//http://stackoverflow.com/questions/680929/how-to-extract-extension-from-filename-string-in-javascript
+
+(?:         # begin non-capturing group
+  \.        #   a dot
+  (         #   begin capturing group (captures the actual extension)
+    [^.]+   #     anything except a dot, multiple times
+  )         #   end capturing group
+)?          # end non-capturing group, make it optional
+$
+*/
+
+	return re.exec(filename)[1];
+}
+
+//http://stackoverflow.com/questions/6463439/how-to-open-a-file-browse-dialog-using-javascript
+//=============================================================================
+function performClick(elemId)
+{
+	var elem = document.getElementById(elemId);
+	if(elem && document.createEvent)
+	{
+		var evt = document.createEvent("MouseEvents");
+		evt.initEvent("click", true, false);
+		elem.dispatchEvent(evt);
+	}
+}
+
+//var data="LINESTRING(lon lat(, lon lat)*)";
+//=============================================================================
+function add_wkt_layer(wkt_file,layer_name)
+{
+	var reader = new FileReader();
+	reader.onload = function(event)
+	{
+		data = event.target.result;
+
+		var data_format = new OpenLayers.Format.WKT("");
+		var wkt_feature=data_format.read(data);
+		wkt_feature.geometry.transform(map.displayProjection, map.getProjectionObject());
+
+		//ratio: render more than currently in viewport -> visible when dragging
+		var wkt_layer=new OpenLayers.Layer.Vector(layer_name, 
+		{ratio:4
+		,styleMap: new OpenLayers.StyleMap({
+			"default": new OpenLayers.Style({
+				fillColor: "#33CC00",
+				strokeColor: "#0000aa",
+				strokeWidth: 4
+			})
+		})},{renderers: ["SVG"]}
+		);
+
+		wkt_layer.addFeatures([wkt_feature]);
+		map.addLayer(wkt_layer);
+	};
+
+	reader.onerror = function(event)
+	{
+		console.error("File could not be read! Code " + event.target.error.code);
+	};
+
+	reader.readAsText(wkt_file);
+}//end add_wkt_layer()
+
+//=============================================================================
 function prompt_load_file()
 {
 	remove_zoom_and_layerswitcher();
 
 	var file_tmp_path;
+	var file_tmp;
 
 	var format_options=
 	{
 		gpx: 'GPX'
 		,geojson: 'GeoJSON'
+		,wkt: 'WKT'
 	};
 	var format_dropdown = $('<select id="format-dropdown-id">');
 	$.each(format_options, function(val, text)
@@ -379,13 +566,18 @@ function prompt_load_file()
 	to view the object sent on submit.
 	*/
 
-	$.prompt('File:'
-	+'<input id="file-browse-id" type="file" name="file_browser" value=""></input><br/>'
-	+'Format: '+ format_dropdown.get(0).outerHTML +'<br/>'
-	+'Extract Attributes: <input id="extract-attrs-id" type="checkbox" name="extract_attributs" value="extract" checked></input><br/>'
-	+'Layername: <input id="layer-name-id" type="text" name="layer_name" value=""></input><br/>',
+	$.prompt('<table>'
+	+'<tr><td>File:</td>'
+	+'<td><input id="file-browse-id" type="file" name="file_browser" value=""></input></td></tr>'
+	+'<tr><td>Format:</td>'
+	+'<td>'+format_dropdown.get(0).outerHTML+'</td></tr>'
+	+'<tr><td>Extract Attributes:</td>'
+	+'<td><input id="extract-attrs-id" type="checkbox" name="extract_attributs" value="extract" checked></input></td></tr>'
+	+'<tr><td>Layername:</td>'
+	+'<td><input id="layer-name-id" type="text" name="layer_name" value=""></input></td></tr>'
+	+'</table>',
 	{
-		title: "Load File"
+		title: "Load File - Import Settings"
 		,buttons: { "Cancel": 0, "  OK  ": 1}
 		,defaultButton: 1
 		,persistent: false
@@ -396,8 +588,32 @@ function prompt_load_file()
 			$('#file-browse-id').change( function(event)
 			{
 				file_tmp_path = URL.createObjectURL(event.target.files[0]);
+				file_tmp = event.target.files[0];
+
+				var filename_extension=parse_filename_extension($("#file-browse-id").val().trim()).toLowerCase();
+
+				//set format based on extension (guess)
+				if(filename_extension=='gpx')
+				{
+					$("#format-dropdown-id").val("gpx");
+				}
+				else if(filename_extension=='json' || filename_extension=='gjson' || filename_extension=='geojson')
+				{
+					$("#format-dropdown-id").val("geojson");
+				}
+				else if(filename_extension=='txt' || filename_extension=='wkt')
+				{
+					$("#format-dropdown-id").val("wkt");
+				}
+
+				//enter layername or press enter
+				$("#layer-name-id").focus();
 			});
- 
+
+			//open file browse dialog automatically
+			performClick('file-browse-id');
+			$("#layer-name-id").focus();
+
 		}//end loaded
 		,close: function(e)
 		{
@@ -431,9 +647,18 @@ function prompt_load_file()
 						data_format = new OpenLayers.Format.GeoJSON("");
 
 					}
+					else if (data_format_id=='wkt')
+					{
+						//handle wkt differently
+						add_wkt_layer(file_tmp,layer_name);
+						return;
+					}
+
 					if(extract_attrs)
 					{
 						data_format.extractAttributes=true;
+						//geojson http://dev.openlayers.org/apidocs/files/OpenLayers/Format/GeoJSON-js.html
+						data_format.ignoreExtraDims=true;
 					}
 
 					var new_layer = new OpenLayers.Layer.Vector(layer_name,
@@ -447,8 +672,8 @@ function prompt_load_file()
 						,styleMap: new OpenLayers.StyleMap({
 							'default': new OpenLayers.Style({
 								fillColor: "#ffcc66"
-								,strokeColor: "#ff0000"
-								,strokeWidth: 10
+								,strokeColor: "#aaaa00"
+								,strokeWidth: 4
 								,graphicZIndex: 1
 								,strokeOpacity: 1
 							})
@@ -461,6 +686,30 @@ function prompt_load_file()
 	}); //end $.prompt
 }//end prompt_load_file()
 
+/*
+viewport size to fit unscaled on A4
+
+A4: portrait:  w: 210mm h: 297mm
+
+297 / 210  ~1.414
+210 / 297  ~0.707
+w: x
+h: x * 1.414
+
+images: 90 DPI
+inch: 25.4mm
+
+dots (pixels) per page width: portrait:  90 * 210 / 25.4 = 744.09  (~ 744)
+dots (pixels) per page height: portrait: 90 * 297 / 25.4 = 1052.36 (~1052)
+*/
+//=============================================================================
+function set_map_size(w, h)
+{
+	document.getElementById('map').style.width = w+'px';
+	document.getElementById('map').style.height = h+'px';
+	map.updateSize();
+}
+
 //=============================================================================
 function init_bottom_panel()
 {
@@ -472,10 +721,9 @@ function init_bottom_panel()
 		,zindex: 10000
 	});
 
-	var layer_items={
-		"fold1-key1": {"name": "Foo bar"},
-		"fold1-key1": {"name": "dynamic here"},
-		"fold1-key3": {"name": "delta"}
+	var map_size_items={
+		"map_size_a4_portrait": {"name": "A4 Portrait"}
+		,"map_size_a4_landscape": {"name": "A4 Landscape"}
 	};
 
 	$('#jquery-menu-node-id').contextMenu(
@@ -524,9 +772,21 @@ function init_bottom_panel()
 			{
 				prompt_load_file();
 			}
-			else if(key=='fold1-key1')
+			else if(key=='load_file')
 			{
-				console.log("here");
+				prompt_load_file();
+			}
+			else if(key=='map_size_a4_portrait')
+			{
+				set_map_size(744,1052);
+			}
+			else if(key=='map_size_a4_landscape')
+			{
+				set_map_size(1052,744);
+			}
+			else if(key=='download_view_description')
+			{
+				downloadViewInfoXML('map_view.xml');
 			}
 		}
 		,items:
@@ -537,13 +797,13 @@ function init_bottom_panel()
 			,"zoom_to_marker": {name: "Zoom to Marker"}
 			,"zoom_max": {name: "Zoom Max"}
 			,"goto_position": {name: "Goto Position"}
-			,"load_file": {name: "Load File"}
-/*
-			,"fold1": {
-				"name": "Delete Layer"
-				,"items": layer_items
+			,"set_map_size": {
+				name: "Set Map Size"
+				,"items": map_size_items
 			}
-*/
+			,"download_view_description": {name: "Download View Description"}
+			,"load_file": {name: "Load File"}
 		}
 	});
 }//end init_bottom_panel()
+//EOF
